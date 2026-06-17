@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0-alpha.1",
+  "id": "@shopgate-project/ext-tracking-matomo",
+  "components": [
+    {
+      "id": "init",
+      "path": "frontend/tracking/index.js",
+      "type": "tracking"
+    },
+    {
+      "id": "Subscribers",
+      "path": "frontend/subscriptions/index.js",
+      "type": "subscribers"
+    }
+  ],
+  "configuration": {
+    "matomoUrl": {
+      "type": "admin",
+      "destination": "backend",
+      "default": "",
+      "params": {
+        "type": "text",
+        "label": "Matomo base URL (e.g. https://matomo.example.com/)",
+        "required": true
+      }
+    },
+    "siteId": {
+      "type": "admin",
+      "destination": "backend",
+      "default": "",
+      "params": {
+        "type": "text",
+        "label": "Matomo Site ID (idSite)",
+        "required": true
+      }
+    },
+    "tokenAuth": {
+      "type": "admin",
+      "destination": "backend",
+      "default": "",
+      "params": {
+        "type": "text",
+        "label": "Matomo token_auth (required for server-side IP / original timestamp)",
+        "description": "Only stored server-side. Needed for cip (real device IP) and cdt (original event timestamp on queued events)."
+      }
+    },
+    "consentMode": {
+      "type": "admin",
+      "destination": "backend",
+      "default": "consentStatistics",
+      "params": {
+        "type": "select",
+        "label": "Consent Mode",
+        "description": "How user consent (Shopgate Consent Manager) gates tracking.",
+        "required": true,
+        "options": {
+          "multiple": false,
+          "options": [
+            { "label": "Always track", "value": "alwaysTrack" },
+            { "label": "Never track", "value": "neverTrack" },
+            { "label": "Track with consent for statistics", "value": "consentStatistics" },
+            { "label": "Track with consent for marketing", "value": "consentMarketing" }
+          ]
+        }
+      }
+    },
+    "cookielessTracking": {
+      "type": "admin",
+      "destination": "backend",
+      "default": false,
+      "params": {
+        "type": "checkbox",
+        "label": "Cookieless fallback when consent is missing",
+        "description": "If enabled, events are still sent without a persistent visitor id (no cookie, anonymized) when statistics/marketing consent is not given. If disabled, nothing is sent without consent."
+      }
+    },
+    "trackProductPageview": {
+      "type": "admin",
+      "destination": "frontend",
+      "default": true,
+      "params": {
+        "type": "checkbox",
+        "label": "Track product detail views (setEcommerceView)"
+      }
+    },
+    "trackSearch": {
+      "type": "admin",
+      "destination": "frontend",
+      "default": true,
+      "params": {
+        "type": "checkbox",
+        "label": "Track site search"
+      }
+    }
+  }
+}

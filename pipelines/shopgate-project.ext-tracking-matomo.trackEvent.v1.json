@@ -1,0 +1,26 @@
+{
+  "version": "1",
+  "pipeline": {
+    "id": "shopgate-project.ext-tracking-matomo.trackEvent.v1",
+    "public": true,
+    "input": [
+      { "id": "1", "key": "events" },
+      { "id": "2", "key": "visitor" },
+      { "id": "750", "key": "sgxsMeta" }
+    ],
+    "output": [{ "id": "10", "key": "success" }],
+    "steps": [
+      {
+        "type": "extension",
+        "id": "@shopgate-project/ext-tracking-matomo",
+        "path": "@shopgate-project/ext-tracking-matomo/lib/trackEvent.js",
+        "input": [
+          { "id": "1", "key": "events" },
+          { "id": "2", "key": "visitor" },
+          { "id": "750", "key": "sgxsMeta" }
+        ],
+        "output": [{ "id": "10", "key": "success" }]
+      }
+    ]
+  }
+}

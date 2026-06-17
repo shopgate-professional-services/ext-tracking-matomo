@@ -1,0 +1,18 @@
+{
+  "name": "@shopgate-project/ext-tracking-matomo",
+  "version": "1.0.0-alpha.1",
+  "description": "Forwards Shopgate PWA tracking events to Matomo via a backend pipeline.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@shopgate/engage": "^7.29.0",
+    "@shopgate/eslint-config": "^7.29.0",
+    "eslint": "^8.57.1"
+  },
+  "peerDependencies": {
+    "@shopgate/engage": "^7.29.0"
+  }
+}

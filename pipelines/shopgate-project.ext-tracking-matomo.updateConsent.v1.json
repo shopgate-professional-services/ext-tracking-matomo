@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "pipeline": {
+    "id": "shopgate-project.ext-tracking-matomo.updateConsent.v1",
+    "public": true,
+    "input": [
+      { "id": "1", "key": "consent" }
+    ],
+    "output": [],
+    "steps": [
+      {
+        "type": "extension",
+        "id": "@shopgate-project/ext-tracking-matomo",
+        "path": "@shopgate-project/ext-tracking-matomo/lib/updateConsent.js",
+        "input": [
+          { "id": "1", "key": "consent" }
+        ],
+        "output": []
+      }
+    ]
+  }
+}
