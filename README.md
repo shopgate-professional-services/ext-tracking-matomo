@@ -32,7 +32,8 @@ session stitches into one Matomo visit.
 | addToCart | cart update (`idgoal=0`, `ec_items`, computed `revenue`, no `ec_id`) |
 | purchase (native **and** web checkout) | ecommerce order (`idgoal=0`, `ec_id`, `revenue`, `ec_items`) |
 | search | site search (`search`, `search_count`) |
-| addToWishlist / login / registration | Matomo events (`e_c` / `e_a` / `e_n`) |
+| addToWishlist | Matomo event (`e_c` / `e_a` / `e_n`) |
+| login / registration | Matomo event + User ID (`uid`, pseudonymous customer id when available) |
 
 ## Configuration (Developer Center)
 
@@ -41,7 +42,7 @@ session stitches into one Matomo visit.
 | `matomoUrl` | backend | Base URL or full `…/matomo.php`. |
 | `siteId` | backend | Matomo `idSite`. |
 | `tokenAuth` | backend | Optional; needed for `cip` (real device IP) and `cdt` (queued events). Stored server-side only. |
-| `consentMode` | backend | `alwaysTrack` / `neverTrack` / `consentStatistics` / `consentMarketing`. |
+| `consentMode` | backend | `alwaysTrack` / `neverTrack` / `consentStatistics` / `consentMarketing`. `consentMarketing` gates on the statistics flag (the Consent Manager has no separate marketing category). |
 | `cookielessTracking` | backend | When consent is missing: track without a persistent visitor id, or stay silent. |
 | `trackProductPageview` | frontend | Toggle product detail view tracking. |
 | `trackSearch` | frontend | Toggle site search tracking. |
@@ -49,9 +50,17 @@ session stitches into one Matomo visit.
 ## Consent
 
 Consent comes from the [Shopgate Consent Manager](https://docs.shopgate.com/docs/connect-doc/3npp9umgibvh5-shopgate-consent-manager).
-The frontend subscriber forwards `cookieConsentSet$` decisions to the backend
-(`updateConsent` pipeline → device storage); the `trackEvent` step reads them and
-applies `consentMode` (+ `cookielessTracking`).
+The frontend subscriber forwards both the **initial** decision (`cookieConsentInitialized$`,
+so a standing decision from a prior session is honored on app start) and every later
+change (`cookieConsentSet$`) to the backend (`updateConsent` pipeline → device storage);
+the `trackEvent` step reads them and applies `consentMode` (+ `cookielessTracking`).
+
+## Visitor id
+
+The stable per-device visitor id (`_id`) is generated and persisted **server-side** in
+the bridge-backed device storage (`extension/lib/matomo/Client.js`), not the WebView's
+`localStorage` — so it reliably survives app restarts and a session stitches into one
+Matomo visit. It is omitted under cookieless tracking.
 
 ## Tests
 
@@ -69,15 +78,21 @@ call, and the backend sends them as **one** bulk `matomo.php` request
 (`{ requests: [...] }`). Matomo then processes them in a single transaction, which
 avoids the `SQLSTATE 1020 Record has changed … try restarting transaction` lock
 collision that separate parallel hits to the same visit row would otherwise cause.
+The queue is also flushed immediately on `visibilitychange`/`pagehide`, so events
+queued in the last ~60ms (notably a web-checkout purchase) are not lost when the app
+backgrounds. Each queued event is stamped with its true time so the backend can send
+Matomo's `cdt` original timestamp (when `tokenAuth` is configured).
 
 ## Open items / tuning
 
 - **addToCart** sends only the *added* item(s). Matomo cart updates are meant to
   carry the **full** current cart; enrich with a cart selector if exact cart
   contents matter for the merchant.
+- **`ec_items` category** column is always empty: the unified Shopgate tracking item
+  carries no category. Source it elsewhere (e.g. a product property) if needed.
 - **setEcommerceView** uses page custom-variable indexes 1–4. Confirm these don't
   collide with custom variables the merchant already uses in their Matomo.
 - **Device IP / user agent**: `cip` is set from `sgxsMeta.deviceIp` only when
   `tokenAuth` is configured; `ua`/`lang` are not yet forwarded.
-- **Original timestamp (`cdt`)**: wired but the frontend does not yet stamp
-  `context.timestamp` for queued/backgrounded events.
+- **User ID** uses the customer id field if present on the login/registration payload;
+  confirm the exact field for the target shop.

@@ -25,12 +25,13 @@ const visitor = { id: 'a1b2c3d4e5f60718' }
 
 function build (event, data, overrides = {}) {
   const client = new Client({ ...baseContext, config: { ...baseContext.config, ...overrides } })
+  const cookieless = overrides.cookieless || false
   return client.buildParams({
     event,
     context: ctx,
-    visitor,
+    visitorId: cookieless ? null : visitor.id,
     data,
-    decision: { track: true, cookieless: overrides.cookieless || false },
+    decision: { track: true, cookieless },
     input: {}
   })
 }
@@ -81,10 +82,21 @@ assert.strictEqual(pur.ec_id, 'O-100')
 assert.strictEqual(pur.revenue, 59.9)
 assert.strictEqual(pur.ec_tx, 9.5)
 
-// search
+// purchase with a legitimate 0 tax/shipping must be sent explicitly, not dropped
+const purZero = build('purchase', { orderId: 'O-101', revenue: 20, tax: 0, shipping: 0, items: [] })
+assert.strictEqual(purZero.ec_tx, 0, 'tax of 0 must be sent, not dropped')
+assert.strictEqual(purZero.ec_sh, 0, 'shipping of 0 must be sent, not dropped')
+
+// search (search_count of 0 must still be sent)
 const se = build('search', { query: 'boots', count: 12 })
 assert.strictEqual(se.search, 'boots')
 assert.strictEqual(se.search_count, 12)
+const seZero = build('search', { query: 'zzz', count: 0 })
+assert.strictEqual(seZero.search_count, 0, 'zero results must be sent')
+
+// generic event with a Matomo User ID
+const evUid = build('event', { category: 'User', action: 'Login', uid: '4242' })
+assert.strictEqual(evUid.uid, '4242', 'user id should be forwarded as Matomo uid')
 
 // generic event
 const ev = build('event', { category: 'User', action: 'Login' })
@@ -115,12 +127,31 @@ async function consentChecks () {
     { track: false, cookieless: true },
     'no consent + cookieless off → do not track'
   )
+  // consentMarketing gates on the statistics flag (Marketing = Statistics).
   assert.deepStrictEqual(
-    await make('consentMarketing', { comfortCookiesAccepted: true }, false).getConsentDecision(),
+    await make('consentMarketing', { statisticsCookiesAccepted: true }, false).getConsentDecision(),
     { track: true, cookieless: false }
+  )
+  assert.deepStrictEqual(
+    await make('consentMarketing', { comfortCookiesAccepted: true, statisticsCookiesAccepted: false }, false).getConsentDecision(),
+    { track: false, cookieless: true },
+    'comfort-only consent must NOT enable marketing-mode tracking'
   )
 }
 
-consentChecks()
-  .then(() => console.log('All Matomo mapping + consent checks passed.'))
+// visitor id: created once and reused from device storage
+async function visitorChecks () {
+  const store = {}
+  const client = new Client({
+    ...baseContext,
+    storage: { device: { get: async k => store[k], set: async (k, v) => { store[k] = v } } }
+  })
+  const first = await client.getVisitorId()
+  assert.ok(/^[0-9a-f]{16}$/.test(first), 'visitor id is 16 hex chars')
+  const second = await client.getVisitorId()
+  assert.strictEqual(second, first, 'visitor id persists across calls')
+}
+
+Promise.all([consentChecks(), visitorChecks()])
+  .then(() => console.log('All Matomo mapping + consent + visitor checks passed.'))
   .catch((e) => { console.error(e); process.exit(1) })

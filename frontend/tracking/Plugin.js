@@ -1,14 +1,37 @@
 import SgTrackingPlugin from '@shopgate/tracking-core/plugins/Base';
 import { getProductById } from '@shopgate/engage/product/selectors/product';
 import { sendTrackingRequest } from './helpers';
-import { getPageContext, advancePage } from './spaContext';
+import { getPageContext } from './spaContext';
 import config from '../config.json';
 
 const { trackProductPageview = true, trackSearch = true } = config || {};
 
 /**
+ * Coerces a value to a finite number, preserving a legitimate 0; returns undefined
+ * otherwise (so e.g. a free-shipping 0 is sent explicitly, not dropped as "unknown").
+ * @param {*} value The value to coerce.
+ * @returns {number|undefined}
+ */
+const toNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+/**
+ * Extracts a stable, pseudonymous user identifier (customer id) from a tracking user
+ * payload for use as the Matomo User ID. Returns undefined when no id is available.
+ * @param {Object} user The user object from a login/registration tracking event.
+ * @returns {string|undefined}
+ */
+const getUserId = (user) => {
+  const id = user && (user.id || user.customerId || (user.user && user.user.id));
+  return id != null && id !== '' ? String(id) : undefined;
+};
+
+/**
  * Maps Shopgate cart/order item shape to Matomo ec_items tuples.
- * Matomo expects [ sku, name, category, price, quantity ].
+ * Matomo expects [ sku, name, category, price, quantity ]. The unified tracking item
+ * carries no category, so that column stays empty unless the source data gains one.
  * @param {Array} items Normalized tracking items.
  * @returns {Array[]}
  */
@@ -43,7 +66,6 @@ class MatomoAnalytics extends SgTrackingPlugin {
     this.register.pageview((data) => {
       const context = getPageContext(data && data.page && data.page.title);
       sendTrackingRequest('pageview', context, {});
-      advancePage();
     });
 
     // Product detail view → Matomo setEcommerceView (page-scoped _pk* custom variables).
@@ -62,7 +84,6 @@ class MatomoAnalytics extends SgTrackingPlugin {
             }
             : { id },
         });
-        advancePage();
       });
     }
 
@@ -85,10 +106,10 @@ class MatomoAnalytics extends SgTrackingPlugin {
       }
       sendTrackingRequest('purchase', getPageContext(), {
         orderId: data.id,
-        revenue: Number(data.revenueGross) || 0,
+        revenue: toNumber(data.revenueGross) || 0,
         currency: data.currency,
-        tax: Number(data.taxGross) || undefined,
-        shipping: Number(data.shippingGross) || undefined,
+        tax: toNumber(data.tax),
+        shipping: toNumber(data.shippingGross),
         items: toEcItems(items),
       });
     });
@@ -102,7 +123,7 @@ class MatomoAnalytics extends SgTrackingPlugin {
         }
         sendTrackingRequest('search', getPageContext(), {
           query,
-          count: typeof data.resultCount === 'number' ? data.resultCount : undefined,
+          count: toNumber(data.hits),
         });
       });
     }
@@ -120,18 +141,21 @@ class MatomoAnalytics extends SgTrackingPlugin {
       });
     });
 
-    // Login / registration → Matomo events.
-    this.register.loginSuccess(() => {
+    // Login / registration → Matomo events, tagged with the Matomo User ID
+    // (a pseudonymous customer id, when available) for cross-device user stitching.
+    this.register.loginSuccess((data) => {
       sendTrackingRequest('event', getPageContext(), {
         category: 'User',
         action: 'Login',
+        uid: getUserId(data),
       });
     });
 
-    this.register.completedRegistration(() => {
+    this.register.completedRegistration((data) => {
       sendTrackingRequest('event', getPageContext(), {
         category: 'User',
         action: 'Registration',
+        uid: getUserId(data),
       });
     });
   }

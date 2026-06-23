@@ -5,7 +5,6 @@
     "public": true,
     "input": [
       { "id": "1", "key": "events" },
-      { "id": "2", "key": "visitor" },
       { "id": "750", "key": "sgxsMeta" }
     ],
     "output": [{ "id": "10", "key": "success" }],
@@ -16,7 +15,6 @@
         "path": "@shopgate-project/ext-tracking-matomo/lib/trackEvent.js",
         "input": [
           { "id": "1", "key": "events" },
-          { "id": "2", "key": "visitor" },
           { "id": "750", "key": "sgxsMeta" }
         ],
         "output": [{ "id": "10", "key": "success" }]

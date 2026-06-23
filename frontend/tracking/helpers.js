@@ -1,6 +1,5 @@
 import { PipelineRequest } from '@shopgate/engage/core/classes';
 import { logger } from '@shopgate/engage/core/helpers';
-import { getVisitorId } from './visitor';
 
 export const TRACK_EVENT_PIPELINE = 'shopgate-project.ext-tracking-matomo.trackEvent';
 
@@ -13,10 +12,14 @@ let queue = [];
 let timer = null;
 
 /**
- * Flushes the queued events as a single pipeline request.
+ * Flushes the queued events as a single pipeline request. The visitor id is resolved
+ * and attached server-side (device storage), so a session stitches into one Matomo visit.
  */
 function flush() {
-  timer = null;
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
   if (!queue.length) {
     return;
   }
@@ -24,14 +27,25 @@ function flush() {
   queue = [];
 
   new PipelineRequest(TRACK_EVENT_PIPELINE)
-    .setInput({
-      visitor: { id: getVisitorId() },
-      events,
-    })
+    .setInput({ events })
     .dispatch()
     .catch((err) => {
       logger.error('Matomo tracking could not be sent', err);
     });
+}
+
+// Flush immediately when the app/WebView is about to be hidden or torn down, so events
+// queued in the last FLUSH_DELAY ms (notably a web-checkout purchase) are not lost.
+if (typeof document !== 'undefined' && document.addEventListener) {
+  const flushOnHide = () => {
+    if (document.visibilityState === 'hidden') {
+      flush();
+    }
+  };
+  document.addEventListener('visibilitychange', flushOnHide);
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('pagehide', flush);
+  }
 }
 
 /**
@@ -42,7 +56,9 @@ function flush() {
  * @param {Object} data Event payload (commerce data, query, user, …).
  */
 export const sendTrackingRequest = (event, context, data = {}) => {
-  queue.push({ event, context, data });
+  // Stamp the true event time so the backend can send Matomo's cdt (original timestamp)
+  // for events that are batched/queued and arrive a moment later.
+  queue.push({ event, context: { ...context, timestamp: Date.now() }, data });
   if (!timer) {
     timer = setTimeout(flush, FLUSH_DELAY);
   }

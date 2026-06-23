@@ -59,7 +59,7 @@
             { "label": "Always track", "value": "alwaysTrack" },
             { "label": "Never track", "value": "neverTrack" },
             { "label": "Track with consent for statistics", "value": "consentStatistics" },
-            { "label": "Track with consent for marketing", "value": "consentMarketing" }
+            { "label": "Track with consent for marketing (uses statistics consent)", "value": "consentMarketing" }
           ]
         }
       }
