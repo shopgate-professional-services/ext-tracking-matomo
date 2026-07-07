@@ -143,16 +143,19 @@ class MatomoAnalytics extends SgTrackingPlugin {
       });
     }
 
-    // Wishlist add → Matomo event.
-    this.register.addToWishlist((data) => {
+    // Wishlist add → Matomo event, labelled with the product name and SKU.
+    this.register.addToWishlist((data, _scope, _blacklist, state) => {
       const [product] = (data && data.items) || [];
       if (!product || !product.id) {
         return;
       }
+      const { productData } = getProductById(state, { productId: product.id }) || {};
+      const sku = (productData && productData.identifiers && productData.identifiers.sku) || product.id;
+      const productName = product.name || (productData && productData.name);
       sendTrackingRequest('event', getPageContext(), {
         category: 'Wishlist',
         action: 'Add to Wishlist',
-        name: product.name || product.id,
+        name: productName ? `${productName} (${sku})` : sku,
       });
     });
 

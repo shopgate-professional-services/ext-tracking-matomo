@@ -32,7 +32,7 @@ session stitches into one Matomo visit.
 | addToCart | cart update (`idgoal=0`, `ec_items`, computed `revenue`, no `ec_id`) |
 | purchase (native **and** web checkout) | ecommerce order (`idgoal=0`, `ec_id`, `revenue`, `ec_items`) |
 | search | site search (`search`, `search_count`); the search page's pageview is suppressed so it is not counted twice |
-| addToWishlist | Matomo event (`Wishlist` / `Add to Wishlist` / **product name**) |
+| addToWishlist | Matomo event (`Wishlist` / `Add to Wishlist` / **`product name (SKU)`**) |
 | login / registration | Matomo event + User ID (`uid`, pseudonymous customer id when available) |
 
 The cart/order item price comes from the unified tracking item; when it is missing
