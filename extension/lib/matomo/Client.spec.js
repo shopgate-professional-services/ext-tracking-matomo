@@ -111,7 +111,11 @@ assert.deepStrictEqual(cvar['4'], ['_pkp', '49.9'])
 const atc = build('addToCart', { items: [['SKU1', 'Shoe', '', 10, 2], ['SKU2', 'Hat', '', 5, 1]] })
 assert.strictEqual(atc.idgoal, 0)
 assert.strictEqual(atc.ec_id, undefined, 'cart update must not have an order id')
-assert.strictEqual(atc.revenue, 25, '10*2 + 5*1 = 25')
+assert.strictEqual(atc.revenue, 25, '10*2 + 5*1 = 25 (sum fallback)')
+
+// addToCart with an explicit full-cart revenue uses it verbatim
+const atcRev = build('addToCart', { items: [['SKU1', 'Shoe', '', 10, 2]], revenue: 47.5 })
+assert.strictEqual(atcRev.revenue, 47.5, 'explicit cart revenue wins over the item sum')
 assert.strictEqual(JSON.parse(atc.ec_items).length, 2)
 
 // purchase → ecommerce order (idgoal 0 + ec_id + revenue)

@@ -1,6 +1,6 @@
 {
   "name": "@shopgate-project/ext-tracking-matomo",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.8",
   "description": "Forwards Shopgate PWA tracking events to Matomo via a backend pipeline.",
   "license": "Apache-2.0",
   "scripts": {

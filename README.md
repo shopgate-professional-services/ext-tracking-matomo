@@ -29,7 +29,7 @@ session stitches into one Matomo visit.
 | --- | --- |
 | pageview | pageview (`url`, `urlref`, `action_name`) |
 | viewContent (product) | `setEcommerceView` via page-scoped `_pk*` custom variables |
-| addToCart | cart update (`idgoal=0`, `ec_items`, computed `revenue`, no `ec_id`) |
+| addToCart | cart update with the **full current cart** (`idgoal=0`, all `ec_items`, cart `revenue`, no `ec_id`) |
 | purchase (native **and** web checkout) | ecommerce order (`idgoal=0`, `ec_id`, `revenue`, `ec_items`) |
 | search | site search (`search`, `search_count`); the search page's pageview is suppressed so it is not counted twice |
 | addToWishlist | Matomo event (`Wishlist` / `Add to Wishlist` / **`product name (SKU)`**) |
@@ -104,9 +104,6 @@ Matomo's `cdt` original timestamp (when `tokenAuth` is configured).
 
 ## Open items / tuning
 
-- **addToCart** sends only the *added* item(s). Matomo cart updates are meant to
-  carry the **full** current cart; enrich with a cart selector if exact cart
-  contents matter for the merchant.
 - **`ec_items` category** column is always empty: the unified Shopgate tracking item
   carries no category. Source it elsewhere (e.g. a product property) if needed.
 - **setEcommerceView** uses page custom-variable indexes 1–4. Confirm these don't

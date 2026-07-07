@@ -217,13 +217,16 @@ class Client {
       }
 
       case 'addToCart':
-        // Cart update = ecommerce goal 0 WITHOUT an order id.
+        // Cart update = ecommerce goal 0 WITHOUT an order id. `data.items` is the FULL
+        // cart; `data.revenue` is the authoritative cart value (falls back to the item sum).
         params.idgoal = 0
         params.ec_items = JSON.stringify(data.items || [])
-        params.revenue = (data.items || []).reduce(
-          (sum, [, , , price, qty]) => sum + (Number(price) || 0) * (Number(qty) || 1),
-          0
-        )
+        params.revenue = data.revenue != null
+          ? data.revenue
+          : (data.items || []).reduce(
+            (sum, [, , , price, qty]) => sum + (Number(price) || 0) * (Number(qty) || 1),
+            0
+          )
         break
 
       case 'purchase':
