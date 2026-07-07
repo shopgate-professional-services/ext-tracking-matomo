@@ -25,6 +25,7 @@ class Client {
     this.tokenAuth = config.tokenAuth || ''
     this.consentMode = config.consentMode || 'consentStatistics'
     this.cookielessTracking = config.cookielessTracking === true
+    this.shortenUrls = config.shortenUrls !== false
     this.storage = storage
     this.tracedRequest = tracedRequest
     this.log = log
@@ -126,6 +127,38 @@ class Client {
   }
 
   /**
+   * Shortens a Shopgate PWA URL for Matomo by dropping the build/CDN path prefix
+   * (shop id, theme, version, build hash, index.html) and keeping the origin + app route:
+   *   https://host/shop_1/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/abc
+   *   → https://host/.../category/abc
+   * Falls back to first-and-last path segment for non-Shopgate URLs. Query/hash are
+   * dropped as noise. No-op when disabled or on unparseable input.
+   * @param {string} rawUrl The full URL.
+   * @returns {string} The shortened (or original) URL.
+   */
+  shortenUrl (rawUrl) {
+    if (!this.shortenUrls || !rawUrl) {
+      return rawUrl
+    }
+    try {
+      const u = new URL(rawUrl)
+      const path = u.pathname
+      const marker = '/index.html/'
+      const idx = path.indexOf(marker)
+      if (idx !== -1) {
+        return `${u.origin}/.../${path.slice(idx + marker.length)}`
+      }
+      const segments = path.split('/').filter(Boolean)
+      if (segments.length <= 2) {
+        return `${u.origin}${path}`
+      }
+      return `${u.origin}/${segments[0]}/.../${segments[segments.length - 1]}`
+    } catch (e) {
+      return rawUrl
+    }
+  }
+
+  /**
    * Builds the matomo.php parameter map for a single event.
    * @param {Object} args Event arguments.
    * @returns {Object}
@@ -137,8 +170,8 @@ class Client {
       apiv: 1,
       send_image: 0,
       rand: `${Date.now()}${Math.floor(Math.random() * 1e6)}`,
-      url: context.url || undefined,
-      urlref: context.urlref || undefined,
+      url: this.shortenUrl(context.url) || undefined,
+      urlref: this.shortenUrl(context.urlref) || undefined,
       action_name: context.title || undefined
     }
 

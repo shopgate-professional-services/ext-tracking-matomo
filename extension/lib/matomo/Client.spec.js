@@ -55,6 +55,30 @@ assert.strictEqual(
   'full matomo.php url should be left as-is'
 )
 
+// URL shortening (Shopgate PWA build/CDN prefix → origin + /.../ + route)
+const longUrl = 'https://sandbox.cdn.connect.shopgate.com/shop_32822/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/3031386464356464'
+const shortClient = new Client(baseContext)
+assert.strictEqual(
+  shortClient.shortenUrl(longUrl),
+  'https://sandbox.cdn.connect.shopgate.com/.../category/3031386464356464',
+  'Shopgate PWA url should keep origin + route, drop the build prefix'
+)
+assert.strictEqual(
+  shortClient.shortenUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/item/abc?x=1#y'),
+  'https://sandbox.cdn.connect.shopgate.com/.../item/abc',
+  'query and hash are dropped as noise'
+)
+assert.strictEqual(
+  shortClient.shortenUrl('https://foo.example/a/b/c/d/e'),
+  'https://foo.example/a/.../e',
+  'non-Shopgate url falls back to first + last segment'
+)
+assert.strictEqual(
+  new Client({ ...baseContext, config: { ...baseContext.config, shortenUrls: false } }).shortenUrl(longUrl),
+  longUrl,
+  'shortenUrls=false leaves the url untouched'
+)
+
 // common params + visitor id
 const pv = build('pageview', {})
 assert.strictEqual(pv.idsite, '7')

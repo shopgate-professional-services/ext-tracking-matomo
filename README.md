@@ -46,6 +46,21 @@ session stitches into one Matomo visit.
 | `cookielessTracking` | backend | When consent is missing: track without a persistent visitor id, or stay silent. |
 | `trackProductPageview` | frontend | Toggle product detail view tracking. |
 | `trackSearch` | frontend | Toggle site search tracking. |
+| `shortenUrls` | backend | Drop the Shopgate PWA build/CDN path prefix from tracked URLs (default on). |
+
+### URL shortening (`shortenUrls`, on by default)
+
+Shopgate PWA URLs carry a long build/CDN prefix (shop id, theme, version, build hash,
+`index.html`) before the actual route. Only the origin and the route are meaningful for
+Matomo, so the backend rewrites:
+
+```
+https://…shopgate.com/shop_32822/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/3031…
+→ https://…shopgate.com/.../category/3031…
+```
+
+Applied consistently to `url` and `urlref`; query/hash are dropped. Non-Shopgate URLs
+fall back to `origin/<first>/.../<last>`. Turn off to send the full URL.
 
 ## Consent
 
