@@ -92,7 +92,10 @@ Matomo's `cdt` original timestamp (when `tokenAuth` is configured).
   carries no category. Source it elsewhere (e.g. a product property) if needed.
 - **setEcommerceView** uses page custom-variable indexes 1–4. Confirm these don't
   collide with custom variables the merchant already uses in their Matomo.
-- **Device IP / user agent**: `cip` is set from `sgxsMeta.deviceIp` only when
-  `tokenAuth` is configured; `ua`/`lang` are not yet forwarded.
+- **Device detection**: the real device `ua` (user-agent), `lang` and `res` (screen
+  resolution) are captured in the webview and forwarded so Matomo detects the actual
+  device/OS/browser (verified on Matomo 5.11: `ua` is honored **without** `tokenAuth` →
+  iPhone / iOS / Mobile Safari / resolution detected). The real device IP (`cip`, for
+  geolocation) still requires `tokenAuth` and is sent from `sgxsMeta.deviceIp` only then.
 - **User ID** uses the customer id field if present on the login/registration payload;
   confirm the exact field for the target shop.

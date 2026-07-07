@@ -147,6 +147,13 @@ class Client {
       params._id = visitorId
     }
 
+    // Real device user-agent / language / screen resolution, so Matomo detects the
+    // actual device/OS/browser instead of the server-side backend request's user agent.
+    // (Verified on Matomo 5.11: honored without token_auth; only cip/geo needs the token.)
+    if (context.ua) params.ua = context.ua
+    if (context.lang) params.lang = context.lang
+    if (context.res) params.res = context.res
+
     // Server-side IP / original timestamp require token_auth.
     if (this.tokenAuth) {
       const deviceIp = input && input.sgxsMeta && input.sgxsMeta.deviceIp

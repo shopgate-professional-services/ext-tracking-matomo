@@ -20,7 +20,14 @@ const baseContext = {
   log: { error: () => {} }
 }
 
-const ctx = { url: 'https://app/p/1', urlref: 'https://app/', title: 'Product 1' }
+const ctx = {
+  url: 'https://app/p/1',
+  urlref: 'https://app/',
+  title: 'Product 1',
+  ua: 'Mozilla/5.0 (iPhone) Safari',
+  lang: 'de-DE',
+  res: '390x844'
+}
 const visitor = { id: 'a1b2c3d4e5f60718' }
 
 function build (event, data, overrides = {}) {
@@ -56,6 +63,9 @@ assert.strictEqual(pv.url, ctx.url)
 assert.strictEqual(pv.urlref, ctx.urlref)
 assert.strictEqual(pv.action_name, ctx.title)
 assert.strictEqual(pv._id, visitor.id, 'valid 16-hex visitor id should be sent')
+assert.strictEqual(pv.ua, ctx.ua, 'device user-agent should be forwarded')
+assert.strictEqual(pv.lang, ctx.lang, 'device language should be forwarded')
+assert.strictEqual(pv.res, ctx.res, 'screen resolution should be forwarded')
 
 // cookieless drops the visitor id
 const pvCookieless = build('pageview', {}, { cookieless: true })
