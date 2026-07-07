@@ -28,7 +28,7 @@ session stitches into one Matomo visit.
 | Shopgate event | Matomo |
 | --- | --- |
 | pageview | pageview (`url`, `urlref`, `action_name`) |
-| viewContent (product) | `setEcommerceView` via page-scoped `_pk*` custom variables |
+| viewContent (product) | product pageview + `setEcommerceView` (page-scoped `_pk*` custom variables) in **one** hit; the plain pageview is suppressed on product pages so they are not counted twice |
 | addToCart | cart update with the **full current cart** (`idgoal=0`, all `ec_items`, cart `revenue`, no `ec_id`) |
 | purchase (native **and** web checkout) | ecommerce order (`idgoal=0`, `ec_id`, `revenue`, `ec_items`) |
 | search | site search (`search`, `search_count`); the search page's pageview is suppressed so it is not counted twice |

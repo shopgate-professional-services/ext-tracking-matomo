@@ -74,10 +74,14 @@ class MatomoAnalytics extends SgTrackingPlugin {
    */
   registerEvents() {
     // Pageviews for category / content pages. Search result pages are handled by the
-    // search handler as a Matomo site search, so skip the pageview for them (else the
-    // search page would be counted twice).
+    // search handler (Matomo site search) and product pages by the viewContent handler
+    // (which sends a pageview + setEcommerceView in one hit), so skip those here — else
+    // the page would be counted twice.
     this.register.pageview((data) => {
       if (data && data.search) {
+        return;
+      }
+      if (trackProductPageview && data && data.product) {
         return;
       }
       const context = getPageContext(data && data.page && data.page.title);
