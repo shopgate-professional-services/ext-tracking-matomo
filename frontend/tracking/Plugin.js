@@ -32,19 +32,29 @@ const getUserId = (user) => {
  * Maps Shopgate cart/order item shape to Matomo ec_items tuples.
  * Matomo expects [ sku, name, category, price, quantity ]. The unified tracking item
  * carries no category, so that column stays empty unless the source data gains one.
+ * When the item price is missing (e.g. add-to-cart before the product is fully loaded),
+ * it is enriched from the product selector using `state`.
  * @param {Array} items Normalized tracking items.
+ * @param {Object} [state] Redux state, used to look up a missing price.
  * @returns {Array[]}
  */
-const toEcItems = (items = []) =>
+const toEcItems = (items = [], state) =>
   items
     .filter(item => item && item.id)
-    .map(item => [
-      item.id,
-      item.name || '',
-      item.category || '',
-      Number(item.priceGross) || 0,
-      Number(item.quantity) || 1,
-    ]);
+    .map((item) => {
+      let price = Number(item.priceGross) || 0;
+      if (!price && state) {
+        const { productData } = getProductById(state, { productId: item.id }) || {};
+        price = Number(productData && productData.price && productData.price.unitPrice) || 0;
+      }
+      return [
+        item.id,
+        item.name || '',
+        item.category || '',
+        price,
+        Number(item.quantity) || 1,
+      ];
+    });
 
 /**
  * Tracking plugin that forwards Shopgate tracking events to Matomo.
@@ -62,8 +72,13 @@ class MatomoAnalytics extends SgTrackingPlugin {
    * Registers all event handlers.
    */
   registerEvents() {
-    // Pageviews for category / content / search result pages.
+    // Pageviews for category / content pages. Search result pages are handled by the
+    // search handler as a Matomo site search, so skip the pageview for them (else the
+    // search page would be counted twice).
     this.register.pageview((data) => {
+      if (data && data.search) {
+        return;
+      }
       const context = getPageContext(data && data.page && data.page.title);
       sendTrackingRequest('pageview', context, {});
     });
@@ -88,18 +103,18 @@ class MatomoAnalytics extends SgTrackingPlugin {
     }
 
     // Add to cart → Matomo cart update.
-    this.register.addToCart((data) => {
+    this.register.addToCart((data, _scope, _blacklist, state) => {
       const items = (data && data.items) || [];
       if (!items.length) {
         return;
       }
       sendTrackingRequest('addToCart', getPageContext(), {
-        items: toEcItems(items),
+        items: toEcItems(items, state),
       });
     });
 
     // Purchase → Matomo ecommerce order. Fires for BOTH native and web checkout.
-    this.register.purchase((data) => {
+    this.register.purchase((data, _scope, _blacklist, state) => {
       const items = (data && data.items) || [];
       if (!data || !data.id) {
         return;
@@ -110,7 +125,7 @@ class MatomoAnalytics extends SgTrackingPlugin {
         currency: data.currency,
         tax: toNumber(data.tax),
         shipping: toNumber(data.shippingGross),
-        items: toEcItems(items),
+        items: toEcItems(items, state),
       });
     });
 
@@ -137,7 +152,7 @@ class MatomoAnalytics extends SgTrackingPlugin {
       sendTrackingRequest('event', getPageContext(), {
         category: 'Wishlist',
         action: 'Add to Wishlist',
-        name: product.id,
+        name: product.name || product.id,
       });
     });
 

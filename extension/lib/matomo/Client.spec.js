@@ -69,6 +69,11 @@ assert.strictEqual(
   'query and hash are dropped as noise'
 )
 assert.strictEqual(
+  shortClient.shortenUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/'),
+  'https://sandbox.cdn.connect.shopgate.com/',
+  'home page (empty route) collapses to origin/'
+)
+assert.strictEqual(
   shortClient.shortenUrl('https://foo.example/a/b/c/d/e'),
   'https://foo.example/a/.../e',
   'non-Shopgate url falls back to first + last segment'

@@ -143,10 +143,12 @@ class Client {
     try {
       const u = new URL(rawUrl)
       const path = u.pathname
-      const marker = '/index.html/'
+      const marker = '/index.html'
       const idx = path.indexOf(marker)
       if (idx !== -1) {
-        return `${u.origin}/.../${path.slice(idx + marker.length)}`
+        // Everything after `.../index.html` is the app route; the prefix is build/CDN noise.
+        const route = path.slice(idx + marker.length).replace(/^\/+/, '')
+        return route ? `${u.origin}/.../${route}` : `${u.origin}/`
       }
       const segments = path.split('/').filter(Boolean)
       if (segments.length <= 2) {
