@@ -20,8 +20,8 @@ server-side IP / original-timestamp control.
 matomo.php has no browser context, so the **frontend** captures `url`, `urlref`
 (previous in-app page) and `title` and forwards them — this is how SPA tracking
 is satisfied (see <https://developer.matomo.org/guides/spa-tracking>). A stable
-16-hex visitor id (`_id`) is generated client-side and sent on every event so a
-session stitches into one Matomo visit.
+16-hex visitor id (`_id`) is owned by the backend (persisted in device storage) and
+attached to every event so a session stitches into one Matomo visit.
 
 ## Events
 
@@ -29,15 +29,17 @@ session stitches into one Matomo visit.
 | --- | --- |
 | pageview | pageview (`url`, `urlref`, `action_name`) |
 | viewContent (product) | product pageview + `setEcommerceView` (page-scoped `_pk*` custom variables) in **one** hit; the plain pageview is suppressed on product pages so they are not counted twice |
-| addToCart | cart update with the **full current cart** (`idgoal=0`, all `ec_items`, cart `revenue`, no `ec_id`) |
+| cart update | cart update with the **full current cart** (`idgoal=0`, all `ec_items`, cart `revenue`, no `ec_id`), tracked on `cartReceived$` (after the cart store is updated) |
 | purchase (native **and** web checkout) | ecommerce order (`idgoal=0`, `ec_id`, `revenue`, `ec_items`) |
-| search | site search (`search`, `search_count`); the search page's pageview is suppressed so it is not counted twice |
+| search | site search (`search`, `search_count`); the search page's pageview is suppressed (only when `trackSearch` is on) so it is not counted twice |
 | addToWishlist | Matomo event (`Wishlist` / `Add to Wishlist` / **`product name (SKU)`**) |
 | login / registration | Matomo event + User ID (`uid`, pseudonymous customer id when available) |
 
-The cart/order item price comes from the unified tracking item; when it is missing
-(e.g. an add-to-cart before the product is fully loaded) it is enriched from the product
-selector so Matomo cart/revenue values stay correct.
+Cart updates are tracked in `frontend/subscriptions/index.js` on `cartReceived$` — not on
+the add-to-cart event, which fires on the optimistic add request before the cart store is
+updated (so the cart would be one item behind). The full cart + value come from the
+platform cart tracking selector (`@shopgate/pwa-tracking/selectors/cart`), so prices and
+discounts match the web shop and the framework's own trackers.
 
 ## Configuration (Developer Center)
 

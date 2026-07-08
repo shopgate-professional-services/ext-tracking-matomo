@@ -1,6 +1,10 @@
 import { PipelineRequest } from '@shopgate/engage/core/classes';
 import { logger } from '@shopgate/engage/core/helpers';
 import { cookieConsentInitialized$, cookieConsentSet$ } from '@shopgate/engage/tracking/streams';
+import { cartReceived$ } from '@shopgate/engage/cart/streams';
+import getCartTrackingData from '@shopgate/pwa-tracking/selectors/cart';
+import { sendTrackingRequest } from '../tracking/helpers';
+import { getPageContext } from '../tracking/spaContext';
 
 const UPDATE_CONSENT_PIPELINE = 'shopgate-project.ext-tracking-matomo.updateConsent';
 
@@ -32,4 +36,28 @@ export default function matomo(subscribe) {
   // session is honored), and keep it in sync on every later change.
   subscribe(cookieConsentInitialized$, ({ action = {} }) => forwardConsent(action));
   subscribe(cookieConsentSet$, ({ action = {} }) => forwardConsent(action));
+
+  // Cart update → Matomo cart update with the FULL, fresh cart. Tracked on cartReceived$
+  // (after RECEIVE_CART) rather than on the add-to-cart event, because that event fires on
+  // the optimistic add REQUEST before the cart store is updated. Uses the platform cart
+  // tracking selector so prices/discounts match the web shop and the framework's own trackers.
+  subscribe(cartReceived$, ({ getState }) => {
+    const { products = [], amount = {} } = getCartTrackingData(getState()) || {};
+    if (!products.length) {
+      return;
+    }
+    const items = products
+      .filter(product => product && product.uid)
+      .map(product => [
+        product.uid,
+        product.name || '',
+        '',
+        Number(product.amount && product.amount.gross) || 0,
+        Number(product.quantity) || 1,
+      ]);
+    sendTrackingRequest('addToCart', getPageContext(), {
+      items,
+      revenue: Number(amount.gross) || 0,
+    });
+  });
 }

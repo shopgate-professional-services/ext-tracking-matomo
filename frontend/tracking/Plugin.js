@@ -1,6 +1,5 @@
 import SgTrackingPlugin from '@shopgate/tracking-core/plugins/Base';
 import { getProductById } from '@shopgate/engage/product/selectors/product';
-import { getCartProducts, getSubTotal, getDiscountsAmount } from '@shopgate/pwa-common-commerce/cart/selectors/index';
 import { sendTrackingRequest } from './helpers';
 import { getPageContext } from './spaContext';
 import config from '../config.json';
@@ -78,7 +77,9 @@ class MatomoAnalytics extends SgTrackingPlugin {
     // (which sends a pageview + setEcommerceView in one hit), so skip those here — else
     // the page would be counted twice.
     this.register.pageview((data) => {
-      if (data && data.search) {
+      // Only skip when the OTHER handler actually tracks the page, else it would vanish:
+      // search pages need trackSearch on (search handler), product pages trackProductPageview.
+      if (trackSearch && data && data.search) {
         return;
       }
       if (trackProductPageview && data && data.product) {
@@ -107,30 +108,10 @@ class MatomoAnalytics extends SgTrackingPlugin {
       });
     }
 
-    // Add to cart → Matomo cart update. Matomo overwrites the visit's cart with what we
-    // send, so it must carry the FULL current cart (like the web shop), not only the
-    // just-added item. Read the whole cart from state; fall back to the added item(s).
-    this.register.addToCart((data, _scope, _blacklist, state) => {
-      const added = (data && data.items) || [];
-      if (!added.length) {
-        return;
-      }
-      const cartProducts = (state && getCartProducts(state)) || [];
-      const items = cartProducts.length
-        ? cartProducts
-          .filter(ci => ci && ci.product && ci.product.id)
-          .map(ci => [
-            ci.product.id,
-            ci.product.name || '',
-            '',
-            Number(ci.product.price && ci.product.price.unit) || 0,
-            Number(ci.quantity) || 1,
-          ])
-        : toEcItems(added, state);
-      const subTotal = Number(getSubTotal(state)) || 0;
-      const revenue = subTotal ? subTotal - (Number(getDiscountsAmount(state)) || 0) : undefined;
-      sendTrackingRequest('addToCart', getPageContext(), { items, revenue });
-    });
+    // Add-to-cart / cart updates are tracked in frontend/subscriptions/index.js on
+    // cartReceived$ (after RECEIVE_CART), where the cart store already reflects the change.
+    // The register.addToCart event fires on the optimistic add REQUEST, before the cart
+    // store is updated, so reading the cart here would send a stale (one-item-behind) cart.
 
     // Purchase → Matomo ecommerce order. Fires for BOTH native and web checkout.
     this.register.purchase((data, _scope, _blacklist, state) => {
