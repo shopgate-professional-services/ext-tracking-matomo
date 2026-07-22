@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0-alpha.10",
+  "version": "1.0.0-alpha.11",
   "id": "@shopgate-project/ext-tracking-matomo",
   "components": [
     {
@@ -100,6 +100,16 @@
         "type": "checkbox",
         "label": "Shorten tracked URLs",
         "description": "Replaces the Shopgate PWA build/CDN path prefix (shop id, theme, version, build hash, index.html) with '/...', keeping the origin and the app route. Example: https://…shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/abc → https://…shopgate.com/.../category/abc"
+      }
+    },
+    "siteBaseUrl": {
+      "type": "admin",
+      "destination": "backend",
+      "default": "",
+      "params": {
+        "type": "text",
+        "label": "Tracked site base URL (rewrite domain)",
+        "description": "If set, the origin of every tracked url/urlref is rewritten to this domain (path kept). Needed when the Matomo site has 'only track visits when the URL starts with…' enabled, because the app's real url is the Shopgate CDN host (…shopgate.com), not the shop domain — so hits would be silently discarded. Set to the site's domain, e.g. https://www.example.com."
       }
     }
   }

@@ -55,33 +55,47 @@ assert.strictEqual(
   'full matomo.php url should be left as-is'
 )
 
-// URL shortening (Shopgate PWA build/CDN prefix → origin + /.../ + route)
+// URL transform: shortening (Shopgate PWA build/CDN prefix → origin + /.../ + route)
 const longUrl = 'https://sandbox.cdn.connect.shopgate.com/shop_32822/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/3031386464356464'
 const shortClient = new Client(baseContext)
 assert.strictEqual(
-  shortClient.shortenUrl(longUrl),
+  shortClient.transformUrl(longUrl),
   'https://sandbox.cdn.connect.shopgate.com/.../category/3031386464356464',
   'Shopgate PWA url should keep origin + route, drop the build prefix'
 )
 assert.strictEqual(
-  shortClient.shortenUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/item/abc?x=1#y'),
+  shortClient.transformUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/item/abc?x=1#y'),
   'https://sandbox.cdn.connect.shopgate.com/.../item/abc',
   'query and hash are dropped as noise'
 )
 assert.strictEqual(
-  shortClient.shortenUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/'),
+  shortClient.transformUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/'),
   'https://sandbox.cdn.connect.shopgate.com/',
   'home page (empty route) collapses to origin/'
 )
 assert.strictEqual(
-  shortClient.shortenUrl('https://foo.example/a/b/c/d/e'),
+  shortClient.transformUrl('https://foo.example/a/b/c/d/e'),
   'https://foo.example/a/.../e',
   'non-Shopgate url falls back to first + last segment'
 )
 assert.strictEqual(
-  new Client({ ...baseContext, config: { ...baseContext.config, shortenUrls: false } }).shortenUrl(longUrl),
+  new Client({ ...baseContext, config: { ...baseContext.config, shortenUrls: false } }).transformUrl(longUrl),
   longUrl,
-  'shortenUrls=false leaves the url untouched'
+  'shortenUrls=false + no siteBaseUrl leaves the url untouched'
+)
+
+// siteBaseUrl: rewrite the origin to the merchant domain (so hits pass the "known URLs" filter)
+const rewriteClient = new Client({ ...baseContext, config: { ...baseContext.config, siteBaseUrl: 'https://www.example.com/' } })
+assert.strictEqual(
+  rewriteClient.transformUrl(longUrl),
+  'https://www.example.com/.../category/3031386464356464',
+  'siteBaseUrl rewrites the origin AND shortening still applies (trailing slash trimmed)'
+)
+assert.strictEqual(
+  new Client({ ...baseContext, config: { ...baseContext.config, shortenUrls: false, siteBaseUrl: 'https://www.example.com' } })
+    .transformUrl('https://sandbox.cdn.connect.shopgate.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/item/abc?x=1'),
+  'https://www.example.com/shop_1/@shopgate/theme-ios11/7.31.1/1/index.html/item/abc',
+  'siteBaseUrl alone rewrites the origin, keeps the full path, drops query'
 )
 
 // common params + visitor id

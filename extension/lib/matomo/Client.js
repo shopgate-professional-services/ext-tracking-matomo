@@ -26,6 +26,7 @@ class Client {
     this.consentMode = config.consentMode || 'consentStatistics'
     this.cookielessTracking = config.cookielessTracking === true
     this.shortenUrls = config.shortenUrls !== false
+    this.siteBaseUrl = (config.siteBaseUrl || '').trim().replace(/\/+$/, '')
     this.storage = storage
     this.tracedRequest = tracedRequest
     this.log = log
@@ -127,34 +128,45 @@ class Client {
   }
 
   /**
-   * Shortens a Shopgate PWA URL for Matomo by dropping the build/CDN path prefix
-   * (shop id, theme, version, build hash, index.html) and keeping the origin + app route:
-   *   https://host/shop_1/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/abc
-   *   → https://host/.../category/abc
-   * Falls back to first-and-last path segment for non-Shopgate URLs. Query/hash are
-   * dropped as noise. No-op when disabled or on unparseable input.
-   * @param {string} rawUrl The full URL.
-   * @returns {string} The shortened (or original) URL.
+   * Shortens the PWA path for Matomo by dropping the Shopgate build/CDN prefix
+   * (shop id, theme, version, build hash, index.html) and keeping the app route:
+   *   /shop_1/@shopgate/theme-ios11/7.31.1/1512359/index.html/category/abc → /.../category/abc
+   * Falls back to first-and-last segment for non-Shopgate paths.
+   * @param {string} path A URL pathname.
+   * @returns {string} The shortened path (leading slash).
    */
-  shortenUrl (rawUrl) {
-    if (!this.shortenUrls || !rawUrl) {
+  shortenPath (path) {
+    const marker = '/index.html'
+    const idx = path.indexOf(marker)
+    if (idx !== -1) {
+      // Everything after `.../index.html` is the app route; the prefix is build/CDN noise.
+      const route = path.slice(idx + marker.length).replace(/^\/+/, '')
+      return route ? `/.../${route}` : '/'
+    }
+    const segments = path.split('/').filter(Boolean)
+    if (segments.length <= 2) {
+      return path
+    }
+    return `/${segments[0]}/.../${segments[segments.length - 1]}`
+  }
+
+  /**
+   * Prepares a URL for Matomo: optionally rewrites the origin to the merchant's site
+   * domain (`siteBaseUrl`) so hits pass Matomo's "only track known URLs" filter, and
+   * optionally shortens the path (`shortenUrls`). Query/hash are dropped as noise.
+   * No-op when both are disabled or on unparseable input.
+   * @param {string} rawUrl The full URL.
+   * @returns {string} The transformed (or original) URL.
+   */
+  transformUrl (rawUrl) {
+    if (!rawUrl || (!this.shortenUrls && !this.siteBaseUrl)) {
       return rawUrl
     }
     try {
       const u = new URL(rawUrl)
-      const path = u.pathname
-      const marker = '/index.html'
-      const idx = path.indexOf(marker)
-      if (idx !== -1) {
-        // Everything after `.../index.html` is the app route; the prefix is build/CDN noise.
-        const route = path.slice(idx + marker.length).replace(/^\/+/, '')
-        return route ? `${u.origin}/.../${route}` : `${u.origin}/`
-      }
-      const segments = path.split('/').filter(Boolean)
-      if (segments.length <= 2) {
-        return `${u.origin}${path}`
-      }
-      return `${u.origin}/${segments[0]}/.../${segments[segments.length - 1]}`
+      const origin = this.siteBaseUrl || u.origin
+      const path = this.shortenUrls ? this.shortenPath(u.pathname) : u.pathname
+      return `${origin}${path}`
     } catch (e) {
       return rawUrl
     }
@@ -172,8 +184,8 @@ class Client {
       apiv: 1,
       send_image: 0,
       rand: `${Date.now()}${Math.floor(Math.random() * 1e6)}`,
-      url: this.shortenUrl(context.url) || undefined,
-      urlref: this.shortenUrl(context.urlref) || undefined,
+      url: this.transformUrl(context.url) || undefined,
+      urlref: this.transformUrl(context.urlref) || undefined,
       action_name: context.title || undefined
     }
 

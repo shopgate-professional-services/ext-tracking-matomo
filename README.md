@@ -53,6 +53,7 @@ discounts match the web shop and the framework's own trackers.
 | `trackProductPageview` | frontend | Toggle product detail view tracking. |
 | `trackSearch` | frontend | Toggle site search tracking. |
 | `shortenUrls` | backend | Drop the Shopgate PWA build/CDN path prefix from tracked URLs (default on). |
+| `siteBaseUrl` | backend | Rewrite the tracked url/urlref origin to this domain (e.g. `https://www.example.com`). Needed when the Matomo site has "only track known URLs" enabled — see below. |
 
 ### URL shortening (`shortenUrls`, on by default)
 
@@ -67,6 +68,22 @@ https://…shopgate.com/shop_32822/@shopgate/theme-ios11/7.31.1/1512359/index.ht
 
 Applied consistently to `url` and `urlref`; query/hash are dropped. Non-Shopgate URLs
 fall back to `origin/<first>/.../<last>`. Turn off to send the full URL.
+
+### Domain rewrite (`siteBaseUrl`)
+
+The app's real url is the Shopgate CDN host (`…shopgate.com`), not the shop's own
+domain. If the Matomo site has **"only track visits when the URL starts with one of
+these URLs"** enabled, every app hit (pageviews, purchases, everything) is silently
+**discarded** (Matomo still answers `204`, but stores nothing). Set `siteBaseUrl` to the
+site's domain and the backend rewrites the origin of `url`/`urlref` to it (path kept),
+so hits pass the filter:
+
+```
+https://sandbox.cdn.connect.shopgate.com/…/index.html/checkout/success
+→ https://www.example.com/.../checkout/success   (siteBaseUrl = https://www.example.com)
+```
+
+Combines with `shortenUrls`. Leave empty to send the app's own origin.
 
 ## Consent
 
