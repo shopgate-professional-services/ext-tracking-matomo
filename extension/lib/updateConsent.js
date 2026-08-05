@@ -7,7 +7,7 @@
  * cannot silently reset a previously granted decision to false.
  * @param {PipelineContext} context Context
  * @param {Object} input Input { consent: { comfortCookiesAccepted, statisticsCookiesAccepted } }
- * @returns {Promise<void>}
+ * @returns {Promise<Object>}
  */
 module.exports = async (context, input) => {
   const consent = (input && input.consent) || {}
@@ -22,4 +22,6 @@ module.exports = async (context, input) => {
   }
 
   await context.storage.device.set('matomoConsent', next)
+
+  return {}
 }

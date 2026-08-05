@@ -102,10 +102,12 @@ Matomo visit. It is omitted under cookieless tracking.
 
 ## Tests
 
-Backend mapping + consent logic:
+Backend mapping + consent logic (tests live in the dev workspace, outside the shipped
+extension, so they are not packed into the upload):
 
 ```
-node extension/lib/matomo/Client.spec.js
+node ../../matomo-local/Client.spec.js
+node ../../matomo-local/integration-test.js
 ```
 
 ## Event batching
