@@ -1,10 +1,17 @@
 import SgTrackingPlugin from '@shopgate/tracking-core/plugins/Base';
 import { getProductById } from '@shopgate/engage/product/selectors/product';
+import { getCurrentRoute } from '@shopgate/engage/core/selectors';
+import { makeGetTrackingData } from '@shopgate/pwa-tracking/selectors';
 import { sendTrackingRequest } from './helpers';
 import { getPageContext } from './spaContext';
 import config from '../config.json';
 
 const { trackProductPageview = true, trackSearch = true } = config || {};
+
+// tracking-core strips the pageview payload down to { page: { merchantUrl, shopgateUrl } },
+// so re-derive the full pageview data (title, category, product, search) from state via
+// the platform's own selector — same source pwa-tracking uses.
+const getTrackingData = makeGetTrackingData();
 
 /**
  * Coerces a value to a finite number, preserving a legitimate 0; returns undefined
@@ -76,17 +83,23 @@ class MatomoAnalytics extends SgTrackingPlugin {
     // search handler (Matomo site search) and product pages by the viewContent handler
     // (which sends a pageview + setEcommerceView in one hit), so skip those here — else
     // the page would be counted twice.
-    this.register.pageview((data) => {
+    this.register.pageview((_data, _scope, _blacklist, state) => {
+      // Re-derive the real pageview data from state (the event payload is stripped).
+      const pv = (state && getTrackingData(state, getCurrentRoute(state))) || {};
       // Only skip when the OTHER handler actually tracks the page, else it would vanish:
-      // search pages need trackSearch on (search handler), product pages trackProductPageview.
-      if (trackSearch && data && data.search) {
+      // product pages → viewContent (if trackProductPageview), search pages → search handler.
+      if (trackProductPageview && pv.product) {
         return;
       }
-      if (trackProductPageview && data && data.product) {
+      if (trackSearch && pv.search) {
         return;
       }
-      const context = getPageContext(data && data.page && data.page.title);
-      sendTrackingRequest('pageview', context, {});
+      // Real title: for a category use its name; otherwise the page/CMS title. (Not the
+      // generic document.title, which is the shop name on every page.)
+      const title = (pv.category && pv.category.name)
+        || (pv.page && pv.page.title)
+        || undefined;
+      sendTrackingRequest('pageview', getPageContext(title), {});
     });
 
     // Product detail view → Matomo setEcommerceView (page-scoped _pk* custom variables).
