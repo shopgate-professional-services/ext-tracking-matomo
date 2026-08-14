@@ -4,7 +4,13 @@ All notable changes to `@shopgate-project/ext-tracking-matomo` are documented he
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0-alpha.14] — unreleased
+## [1.0.0-alpha.15] — unreleased
+
+### Added
+- `productIdentifier` config (`sku` | `id`, default `sku`): the same product identifier is
+  now used consistently across product view, cart and purchase ecommerce events.
+
+## [1.0.0-alpha.14]
 
 ### Changed
 - Ecommerce product view now sends the top-level `_pks`/`_pkn`/`_pkc`/`_pkp` tracking

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0-alpha.14",
+  "version": "1.0.0-alpha.15",
   "id": "@shopgate-project/ext-tracking-matomo",
   "components": [
     {
@@ -90,6 +90,23 @@
       "params": {
         "type": "checkbox",
         "label": "Track site search"
+      }
+    },
+    "productIdentifier": {
+      "type": "admin",
+      "destination": "frontend",
+      "default": "sku",
+      "params": {
+        "type": "select",
+        "label": "Product identifier for ecommerce events",
+        "description": "Which identifier to report for products across all ecommerce events (product view, cart, purchase), for consistent Matomo product reports.",
+        "options": {
+          "multiple": false,
+          "options": [
+            { "label": "SKU", "value": "sku" },
+            { "label": "Internal product ID", "value": "id" }
+          ]
+        }
       }
     },
     "shortenUrls": {

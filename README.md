@@ -52,6 +52,7 @@ discounts match the web shop and the framework's own trackers.
 | `cookielessTracking` | backend | When consent is missing: track without a persistent visitor id, or stay silent. |
 | `trackProductPageview` | frontend | Toggle product detail view tracking. |
 | `trackSearch` | frontend | Toggle site search tracking. |
+| `productIdentifier` | frontend | `sku` (default) or `id` — the identifier used for products across all ecommerce events (view/cart/purchase). |
 | `shortenUrls` | backend | Drop the Shopgate PWA build/CDN path prefix from tracked URLs (default on). |
 | `siteBaseUrl` | backend | Rewrite the tracked url/urlref origin to this domain (e.g. `https://www.example.com`). Needed when the Matomo site has "only track known URLs" enabled — see below. |
 

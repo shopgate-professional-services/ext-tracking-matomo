@@ -5,6 +5,7 @@ import { cartReceived$ } from '@shopgate/engage/cart/streams';
 import getCartTrackingData from '@shopgate/pwa-tracking/selectors/cart';
 import { sendTrackingRequest } from '../tracking/helpers';
 import { getPageContext } from '../tracking/spaContext';
+import { resolveProductId } from '../tracking/productId';
 
 const UPDATE_CONSENT_PIPELINE = 'shopgate-project.ext-tracking-matomo.updateConsent';
 
@@ -42,13 +43,14 @@ export default function matomo(subscribe) {
   // the optimistic add REQUEST before the cart store is updated. Uses the platform cart
   // tracking selector so prices/discounts match the web shop and the framework's own trackers.
   subscribe(cartReceived$, ({ getState }) => {
-    const { products = [], amount = {} } = getCartTrackingData(getState()) || {};
+    const state = getState();
+    const { products = [], amount = {} } = getCartTrackingData(state) || {};
     // Send even an empty cart (items: [], revenue: 0) so Matomo clears the abandoned cart
     // when the last item is removed — Matomo overwrites the visit cart with what we send.
     const items = products
       .filter(product => product && product.uid)
       .map(product => [
-        product.uid,
+        resolveProductId({ id: product.uid }, state),
         product.name || '',
         '',
         Number(product.amount && product.amount.gross) || 0,

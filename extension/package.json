@@ -1,6 +1,6 @@
 {
   "name": "@shopgate-project/ext-tracking-matomo",
-  "version": "1.0.0-alpha.14",
+  "version": "1.0.0-alpha.15",
   "description": "Backend steps that forward Shopgate tracking events to the Matomo HTTP Tracking API.",
   "license": "Apache-2.0",
   "scripts": {

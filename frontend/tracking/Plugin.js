@@ -4,6 +4,7 @@ import { getCurrentRoute } from '@shopgate/engage/core/selectors';
 import { makeGetTrackingData } from '@shopgate/pwa-tracking/selectors';
 import { sendTrackingRequest } from './helpers';
 import { getPageContext } from './spaContext';
+import { resolveProductId } from './productId';
 import config from '../config.json';
 
 const { trackProductPageview = true, trackSearch = true } = config || {};
@@ -55,7 +56,7 @@ const toEcItems = (items = [], state) =>
         price = Number(productData && productData.price && productData.price.unitPrice) || 0;
       }
       return [
-        item.id,
+        resolveProductId({ id: item.id }, state),
         item.name || '',
         item.category || '',
         price,
@@ -102,7 +103,7 @@ class MatomoAnalytics extends SgTrackingPlugin {
       sendTrackingRequest('pageview', getPageContext(title), {});
     });
 
-    // Product detail view → Matomo setEcommerceView (page-scoped _pk* custom variables).
+    // Product detail view → Matomo setEcommerceView (top-level _pk* ecommerce params).
     if (trackProductPageview) {
       this.register.viewContent((data, _scope, _blacklist, state) => {
         const id = data && data.id;
@@ -112,7 +113,7 @@ class MatomoAnalytics extends SgTrackingPlugin {
           product: product
             ? {
               id,
-              sku: (product.identifiers && product.identifiers.sku) || id,
+              sku: resolveProductId({ sku: product.identifiers && product.identifiers.sku, id }, state),
               name: product.name,
               price: product.price && product.price.unitPrice,
             }
