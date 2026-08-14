@@ -2,6 +2,7 @@ import { PipelineRequest } from '@shopgate/engage/core/classes';
 import { logger } from '@shopgate/engage/core/helpers';
 import { cookieConsentInitialized$, cookieConsentSet$ } from '@shopgate/engage/tracking/streams';
 import { cartReceived$ } from '@shopgate/engage/cart/streams';
+import { RECEIVE_CART } from '@shopgate/engage/cart';
 import getCartTrackingData from '@shopgate/pwa-tracking/selectors/cart';
 import { sendTrackingRequest } from '../tracking/helpers';
 import { getPageContext } from '../tracking/spaContext';
@@ -42,7 +43,12 @@ export default function matomo(subscribe) {
   // (after RECEIVE_CART) rather than on the add-to-cart event, because that event fires on
   // the optimistic add REQUEST before the cart store is updated. Uses the platform cart
   // tracking selector so prices/discounts match the web shop and the framework's own trackers.
-  subscribe(cartReceived$, ({ getState }) => {
+  subscribe(cartReceived$, ({ getState, action }) => {
+    // cartReceived$ also emits on ERROR_CART; only act on a real cart response, else a failed
+    // (initial) fetch would overwrite an existing abandoned cart with an empty one.
+    if (!action || action.type !== RECEIVE_CART) {
+      return;
+    }
     const state = getState();
     const { products = [], amount = {} } = getCartTrackingData(state) || {};
     // Send even an empty cart (items: [], revenue: 0) so Matomo clears the abandoned cart

@@ -4,52 +4,38 @@ All notable changes to `@shopgate-project/ext-tracking-matomo` are documented he
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0-alpha.15] — unreleased
+## [1.0.0]
 
-### Added
-- `productIdentifier` config (`sku` | `id`, default `sku`): the same product identifier is
-  now used consistently across product view, cart and purchase ecommerce events.
+Initial release — forwards Shopgate Connect PWA tracking events to a Matomo instance via a
+backend pipeline (Scenario B: frontend tracking plugin → pipeline → backend step → Matomo
+HTTP Tracking API).
 
-## [1.0.0-alpha.14]
+### Tracked events
 
-### Changed
-- Ecommerce product view now sends the top-level `_pks`/`_pkn`/`_pkc`/`_pkp` tracking
-  parameters instead of visit-scoped `_cvar` custom variables.
-- Cart updates are also sent for an empty cart (`ec_items: []`, `revenue: 0`), so Matomo
-  clears the abandoned cart when the last item is removed.
-- The frontend `test` script no longer points at a non-existent jest setup.
+- **Pageview** for category/content pages, with the real page/category title.
+- **Product view** via `setEcommerceView` (top-level `_pks`/`_pkn`/`_pkc`/`_pkp` params);
+  the plain pageview is suppressed on product pages so they are not counted twice.
+- **Cart update** with the full current cart (tracked on `RECEIVE_CART` so the cart is
+  fresh); an empty cart is also sent so Matomo clears the abandoned cart on removal.
+- **Purchase** — ecommerce order for both native and web checkout.
+- **Site search**, **wishlist**, and **login/registration** (with Matomo User ID).
 
-### Fixed
-- The backend now throws on a non-2xx Matomo response, so `trackBatch` reports
-  `success: false` and the pipeline surfaces the failure.
+### Features
 
-### Added
-- `@shopgate/pwa-tracking` and `@shopgate/tracking-core` declared as frontend
-  devDependencies (they are imported directly).
-- Repository documentation: `CHANGELOG.md`, `AGENTS.md`, `CLAUDE.md`.
+- Backend-owned persistent visitor id (device storage) so a session stitches into one visit.
+- Event batching into one bulk `matomo.php` request; flushed on app hide.
+- Real device user-agent / language / screen resolution forwarded (`ua`/`lang`/`res`).
+- Consent via the Shopgate Consent Manager: `consentMode`
+  (`alwaysTrack`/`neverTrack`/`consentStatistics`/`consentMarketing`) plus a cookieless
+  fallback; consent is seeded on start and kept in sync (merged, not overwritten).
+- Configurable product identifier (`productIdentifier`: `sku` | `id`), applied consistently
+  across all ecommerce events.
+- URL handling: `shortenUrls` (drop the Shopgate build/CDN path prefix) and `siteBaseUrl`
+  (rewrite the origin to the shop domain so hits pass Matomo's "only track known URLs" filter).
+- The backend throws on non-2xx Matomo responses so tracking failures surface in the pipeline.
 
-## [1.0.0-alpha.13]
-- Excluded the runnable unit test from the shipped bundle; `updateConsent` returns `{}`.
+### Configuration
 
-## [1.0.0-alpha.12]
-- Fixed product-page double tracking and wrong page titles (category name): re-derive the
-  real pageview data from state (`makeGetTrackingData` + `getCurrentRoute`), since
-  tracking-core strips the pageview payload.
-
-## [1.0.0-alpha.11]
-- `siteBaseUrl` config: rewrite the tracked url/urlref origin to the shop domain so hits
-  pass Matomo's "only track known URLs" filter.
-
-## [1.0.0-alpha.8 – alpha.10]
-- Full-cart tracking on `cartReceived$` (fresh cart) via the platform cart selector;
-  fixed search double-tracking, wishlist name+SKU, add-to-cart price, consent-on-init merge.
-
-## [1.0.0-alpha.4 – alpha.7]
-- Addressed the first code review: purchase tax/search field fixes, falsy-zero handling,
-  backend-owned visitor id, flush-on-hide, device `ua`/`lang`/`res`, URL shortening,
-  `consentMarketing` gates on statistics consent.
-
-## [1.0.0-alpha.1]
-- Initial Matomo tracking extension (Scenario B, frontend + backend): pageview,
-  viewContent, addToCart, purchase (native and web checkout), search, wishlist,
-  login/registration; consent via the Shopgate Consent Manager; event batching.
+`matomoUrl`, `siteId`, `tokenAuth`, `consentMode`, `cookielessTracking`, `shortenUrls`,
+`siteBaseUrl` (backend); `trackProductPageview`, `trackSearch`, `productIdentifier` (frontend).
+See `README.md`.
