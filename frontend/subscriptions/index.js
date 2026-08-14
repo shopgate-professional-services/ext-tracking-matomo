@@ -43,9 +43,8 @@ export default function matomo(subscribe) {
   // tracking selector so prices/discounts match the web shop and the framework's own trackers.
   subscribe(cartReceived$, ({ getState }) => {
     const { products = [], amount = {} } = getCartTrackingData(getState()) || {};
-    if (!products.length) {
-      return;
-    }
+    // Send even an empty cart (items: [], revenue: 0) so Matomo clears the abandoned cart
+    // when the last item is removed — Matomo overwrites the visit cart with what we send.
     const items = products
       .filter(product => product && product.uid)
       .map(product => [

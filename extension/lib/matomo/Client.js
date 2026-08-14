@@ -217,14 +217,13 @@ class Client {
         break
 
       case 'viewContent': {
-        // setEcommerceView → page-scoped _pk* custom variables.
+        // setEcommerceView → top-level ecommerce product-view params (NOT _cvar, which is
+        // visit-scoped custom variables). See Matomo Tracking API: ecommerce product view.
         const p = data.product || {}
-        params._cvar = JSON.stringify({
-          1: ['_pks', String(p.sku || p.id || '')],
-          2: ['_pkn', String(p.name || '')],
-          3: ['_pkc', String(p.category || '')],
-          4: ['_pkp', String(p.price != null ? p.price : '')]
-        })
+        params._pks = String(p.sku || p.id || '')
+        if (p.name) params._pkn = String(p.name)
+        if (p.category) params._pkc = String(p.category)
+        if (p.price != null) params._pkp = p.price
         break
       }
 
@@ -311,6 +310,8 @@ class Client {
         { statusCode: response.statusCode, body: response.body },
         `Matomo error code ${response.statusCode} in response`
       )
+      // Throw so trackBatch reports success:false and the pipeline sees the failure.
+      throw new Error(`Matomo responded with status ${response.statusCode}`)
     }
   }
 }
